@@ -1,7 +1,6 @@
 from article_scraper import ArticleScraper
 from article import Article
 
-
 class CorriereDellaSeraScraper(ArticleScraper):
     location = "https://www.corriere.it"
     encoding = "iso-8859-1"
