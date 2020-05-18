@@ -1,42 +1,38 @@
 import cherrypy
 import requests
+from argparse import ArgumentParser
+from importlib import import_module
 from bs4 import BeautifulSoup
 from mako.template import Template
 from dataclasses import dataclass
+from article import Article
 
 class Scraper(object):
 
-    @dataclass
-    class Article:
-      title: str
-      subtitle: str
-
     @cherrypy.expose
-    def index(self):  
+    def index(self):
         tpl = Template(filename="./scrape.tpl")
-        page = requests.get("https://www.corriere.it")
-        parser = self.get_parser(page.text)
-        articles = filter(None, map(self.extract_article, parser.select(".bck-media-news")))
+        scraper = self.get_scraper()
+        page = requests.get(scraper.location)
+        parser = self.get_parser(scraper, page.text)
+        return tpl.render(attrs={"articles": scraper.extract_articles(parser) })
 
-        return tpl.render(attrs={ "articles": articles })
-
-    def extract_article(self, block):
-      title = block.find(class_="title-art-hp")
-      subtitle = block.find(class_="subtitle-art")
-
-      if title and subtitle:
-        return self.Article(title.text, subtitle.text) 
-
-      return None
-
-    def get_parser(self, text):
+    def get_parser(self, scraper, text):
         try:
-          text = bytes(text, 'iso-8859-1')
+            text = bytes(text, scraper.encoding)
         except Exception as error:
-          print(error)
-          text = ""
+            print(error)
+            text = ""
 
         return BeautifulSoup(text, "html.parser")
+
+    def get_scraper(self):
+        argument_parser = ArgumentParser()
+        argument_parser.add_argument('--scraper')
+        args = argument_parser.parse_args()
+        imported_module = import_module("scrapers")
+        ScraperClass = getattr(imported_module, args.scraper + "Scraper")
+        return ScraperClass()
 
 
 cherrypy.config.update({
