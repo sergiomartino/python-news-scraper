@@ -1,6 +1,6 @@
+import cherrypy
 import requests
 from bs4 import BeautifulSoup
-import cherrypy
 from mako.template import Template
 from dataclasses import dataclass
 
@@ -16,13 +16,9 @@ class Scraper(object):
         tpl = Template(filename="./scrape.tpl")
         page = requests.get("https://www.corriere.it")
         parser = self.get_parser(page.text)
-        articles = filter(lambda b: b, map(self.extract_article, parser.select(".bck-media-news")))
+        articles = filter(None, map(self.extract_article, parser.select(".bck-media-news")))
 
-        ctx = {
-            "articles": articles
-        }
-
-        return tpl.render(attrs=ctx)
+        return tpl.render(attrs={ "articles": articles })
 
     def extract_article(self, block):
       title = block.find(class_="title-art-hp")
@@ -45,7 +41,7 @@ class Scraper(object):
 
 cherrypy.config.update({
     "tools.staticdir.on": True,
-    "tools.staticdir.dir": "c:/repos/python/scraping"
+    "tools.staticdir.dir": "/"
 })
 
 cherrypy.quickstart(Scraper())
