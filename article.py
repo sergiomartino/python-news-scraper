@@ -3,4 +3,6 @@ from dataclasses import dataclass
 @dataclass
 class Article:
     title: str
-    subtitle: str
+
+    def __hash__(self):
+        return hash(self.title)

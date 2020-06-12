@@ -1,43 +1,44 @@
-import cherrypy
 import requests
-from argparse import ArgumentParser
+import click
+import time
+import Article
 from importlib import import_module
 from bs4 import BeautifulSoup
 from mako.template import Template
-from dataclasses import dataclass
-from article import Article
-
-class Scraper(object):
-
-    @cherrypy.expose
-    def index(self):
-        tpl = Template(filename="./scrape.tpl")
-        scraper = self.get_scraper()
-        page = requests.get(scraper.location)
-        parser = self.get_parser(scraper, page.text)
-        return tpl.render(attrs={"articles": scraper.extract_articles(parser) })
-
-    def get_parser(self, scraper, text):
-        try:
-            text = bytes(text, scraper.encoding)
-        except Exception as error:
-            print(error)
-            text = ""
-
-        return BeautifulSoup(text, "html.parser")
-
-    def get_scraper(self):
-        argument_parser = ArgumentParser()
-        argument_parser.add_argument('--scraper')
-        args = argument_parser.parse_args()
-        imported_module = import_module("scrapers")
-        ScraperClass = getattr(imported_module, args.scraper + "Scraper")
-        return ScraperClass()
 
 
-cherrypy.config.update({
-    "tools.staticdir.on": True,
-    "tools.staticdir.dir": "/"
-})
+@click.command()
+@click.option('--scraper')
+def main(scraper):
+    registered_scraper = get_scraper(scraper)
+    page = requests.get(registered_scraper.location)
+    parser = get_parser(registered_scraper, page.text)
+    extract(registered_scraper.extract_articles(parser), registered_scraper.encoding)
+    print("done!")
 
-cherrypy.quickstart(Scraper())
+def extract(articles, encoding):
+    tpl = Template(filename="scrape.tpl")
+    text = tpl.render(attrs={ "articles": articles })
+    file = open("screenshot.txt", "w", encoding=encoding) 
+    file.write(text) 
+    file.close() 
+
+def get_parser(scraper, text):
+    try:
+        text = bytes(text, scraper.encoding)
+    except Exception as error:
+        print(error)
+        text = ""
+
+    return BeautifulSoup(text, "html.parser")
+
+def get_scraper(scraper):
+    try:
+        name = scraper + "Scraper"
+        module = import_module(name)
+        return getattr(module, name)()
+    except ModuleNotFoundError as error:
+        print(error)
+
+if __name__ == '__main__':
+    main()

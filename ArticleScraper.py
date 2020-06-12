@@ -6,8 +6,8 @@ class ArticleScraper(ABC):
     @property
     @abstractmethod
     def location(self):
-        pass
+        raise Exception("location property must be defined")
 
     @abstractmethod
     def extract_articles(parser): 
-        pass
+        raise Exception("extract_articles method must be defined")
